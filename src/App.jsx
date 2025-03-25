@@ -73,7 +73,7 @@ const styles = {
     background: "linear-gradient(135deg, #1f1c2c 0%, #928dab 50%, #00c9ff 100%)",
     color: "#fff",
     minHeight: "100vh",
-    width: "100%",
+    width: "100vw",
     display: "flex",
     flexDirection: "column",
     fontFamily: "'Poppins', sans-serif",
@@ -113,6 +113,7 @@ const styles = {
     alignItems: "center",
     padding: "2rem",
     position: "relative",
+    width: "100%", // Add this
   },
   card: {
     background: "rgba(255, 255, 255, 0.08)",
@@ -121,9 +122,10 @@ const styles = {
     boxShadow: "0 8px 30px rgba(0, 0, 0, 0.3)",
     border: "1px solid rgba(255, 255, 255, 0.2)",
     textAlign: "center",
-    maxWidth: "550px",
+    width: "100%",
+    maxWidth: "550px", // This keeps content readable on large screens
     transition: "all 0.5s ease",
-  },
+  },  
   cardActive: {
     background: "rgba(255, 255, 255, 0.15)",
     padding: "2.5rem",
