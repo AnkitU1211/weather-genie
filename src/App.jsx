@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Maintenance from './components/Maintenance';
 
 const App = () => {
-  const isUnderMaintenance = false; // change this to true to enable maintenance
+  const isUnderMaintenance = true; // change this to true to enable maintenance
 
   useEffect(() => {
     const setVH = () => {
