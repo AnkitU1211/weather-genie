@@ -73,7 +73,7 @@ const styles = {
     background: "linear-gradient(135deg, #1f1c2c 0%, #928dab 50%, #00c9ff 100%)",
     color: "#fff",
     minHeight: "100vh",
-    maxWidth: "100vw",
+    width: "100%",
     display: "flex",
     flexDirection: "column",
     fontFamily: "'Poppins', sans-serif",
