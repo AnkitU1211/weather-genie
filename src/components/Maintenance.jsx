@@ -4,6 +4,7 @@ export default function Maintenance() {
   return (
     <div style={{
       height: '100vh',
+      width: '100vw',
       backgroundColor: '#0f172a',
       color: '#f1f5f9',
       display: 'flex',
