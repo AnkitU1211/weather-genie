@@ -3,7 +3,7 @@ import Maintenance from './components/Maintenance';
 
 
 const App = () => {
-  const isUnderMaintenance = true; // change this to false to disable maintenance
+  const isUnderMaintenance = false; // change this to false to disable maintenance
 
   if (isUnderMaintenance) {
     return <Maintenance />;
