@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import Maintenance from './components/Maintenance';
+import WeatherGenieAI from './components/WeatherGenieAI';
 
 const App = () => {
-  const isUnderMaintenance = true; // change this to true to enable maintenance
+  const isUnderMaintenance = false; // change this to true to enable maintenance
 
   useEffect(() => {
     const setVH = () => {
@@ -55,11 +56,14 @@ const App = () => {
             {isGenieActive ? "Release the Genie 🌀" : "Summon the Genie 🧞‍♂️"}
           </button>
           {isGenieActive && (
-            <div style={styles.genieEffect}>
-              <span style={styles.sparkle}>✨</span>
-              <span style={styles.sparkle}>🌟</span>
-              <span style={styles.sparkle}>⚡️</span>
-            </div>
+            <>
+              <div style={styles.genieEffect}>
+                <span style={styles.sparkle}>✨</span>
+                <span style={styles.sparkle}>🌟</span>
+                <span style={styles.sparkle}>⚡️</span>
+              </div>
+              <WeatherGenieAI />
+            </>
           )}
         </section>
       </main>
@@ -78,16 +82,17 @@ const styles = {
   wrapper: {
     background: "linear-gradient(135deg, #1f1c2c 0%, #928dab 50%, #00c9ff 100%)",
     color: "#fff",
-    height: "calc(var(--vh, 1vh) * 100)",
+    height: "auto", // previously: calc(var(--vh, 1vh) * 100)
+    minHeight: "100vh",
     width: "100vw",
     display: "flex",
     flexDirection: "column",
     fontFamily: "'Poppins', sans-serif",
-    overflow: "hidden",
     position: "relative",
     margin: 0,
     padding: 0,
-  },
+    overflowX: "hidden", // changed this from "overflow: hidden"
+  },  
   header: {
     textAlign: "center",
     padding: "3rem 1rem 1.5rem",
