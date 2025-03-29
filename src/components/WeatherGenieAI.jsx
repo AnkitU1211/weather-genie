@@ -17,7 +17,9 @@ export default function WeatherGenieAI() {
   const blinkAnimationRef = useRef(null);
   const stopBlinkDetection = useRef(false);
   const blinkTimeoutRef = useRef(null);
-  const speechRef = useRef(null); // 🆕 Reference to control voice
+  const speechRef = useRef(null);
+
+  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
   const computeEAR = (eye) => {
     const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
@@ -71,7 +73,7 @@ export default function WeatherGenieAI() {
           blinkTimeoutRef.current = null;
         }
 
-        stopSpeech(); // 🛑 Stop voice before fetching
+        stopSpeech();
         await fetchWeatherAndMood();
         return;
       }
@@ -207,30 +209,39 @@ export default function WeatherGenieAI() {
         };
       };
 
-      if (!mood && !suggestion) {
+      if (!mood && !suggestion && navigator.userActivation?.hasBeenActive) {
         speakGenieInstruction('hi-IN');
       }
 
       try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setError('🚫 Your browser does not support camera access.');
+          return;
+        }
+
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
           faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
         ]);
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' }
+        });
+
         streamRef.current = stream;
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
 
         detectBlink();
 
+        const timeoutDuration = isMobile ? 15000 : 10000;
         blinkTimeoutRef.current = setTimeout(() => {
           if (!stopBlinkDetection.current) {
             stopCamera();
             setLoading(false);
-            setError('⌛ Timeout: Please blink twice within 10 seconds.');
+            setError('⌛ Timeout: Please blink twice within time.');
           }
-        }, 10000);
+        }, timeoutDuration);
       } catch (err) {
         stopCamera();
         setError('🚫 Camera or model loading issue!');
