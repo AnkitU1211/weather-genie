@@ -3,7 +3,7 @@ import Maintenance from './components/Maintenance';
 import WeatherGenieAI from './components/WeatherGenieAI';
 
 const App = () => {
-  const isUnderMaintenance = false; // change this to true to enable maintenance
+  const isUnderMaintenance = false;
 
   useEffect(() => {
     const setVH = () => {
@@ -14,6 +14,36 @@ const App = () => {
     window.addEventListener('resize', setVH);
     return () => window.removeEventListener('resize', setVH);
   }, []);
+
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+
+  const handleRazorpayPayment = () => {
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: 49900,
+      currency: 'INR',
+      name: 'Weather Genie',
+      description: 'Support the Genie!',
+      handler: function (response) {
+        alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
+      },
+      prefill: {
+        name: 'Weather Genie User',
+        email: 'user@example.com',
+        contact: '9999999999'
+      },
+      theme: {
+        color: '#6366f1'
+      }
+    };
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
 
   if (isUnderMaintenance) {
     return <Maintenance />;
@@ -32,8 +62,7 @@ const App = () => {
           <span style={styles.logoAnimation}>🌦️</span> Weather Genie
         </h1>
         <p style={styles.tagline}>
-          Your AI-powered mood-based movie assistant{" "}
-          <span style={styles.flicker}>🎥</span>
+          Your AI-powered mood-based movie assistant <span style={styles.flicker}>🎥</span>
         </p>
       </header>
 
@@ -62,7 +91,7 @@ const App = () => {
                 <span style={styles.sparkle}>🌟</span>
                 <span style={styles.sparkle}>⚡️</span>
               </div>
-              <WeatherGenieAI />
+              <WeatherGenieAI onSupportClick={handleRazorpayPayment} />
             </>
           )}
         </section>
@@ -70,8 +99,7 @@ const App = () => {
 
       <footer style={styles.footer}>
         <p>
-          © 2025 Weather Genie · Crafted with{" "}
-          <span style={styles.footerPulse}>☁️ + 🎬</span>
+          © 2025 Weather Genie · Crafted with <span style={styles.footerPulse}>☁️ + 🎬</span>
         </p>
       </footer>
     </div>
@@ -82,7 +110,7 @@ const styles = {
   wrapper: {
     background: "linear-gradient(135deg, #1f1c2c 0%, #928dab 50%, #00c9ff 100%)",
     color: "#fff",
-    height: "auto", // previously: calc(var(--vh, 1vh) * 100)
+    height: "auto",
     minHeight: "100vh",
     width: "100vw",
     display: "flex",
@@ -91,8 +119,8 @@ const styles = {
     position: "relative",
     margin: 0,
     padding: 0,
-    overflowX: "hidden", // changed this from "overflow: hidden"
-  },  
+    overflowX: "hidden",
+  },
   header: {
     textAlign: "center",
     padding: "3rem 1rem 1.5rem",
