@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as faceapi from 'face-api.js';
 
 export default function WeatherGenieAI() {
@@ -7,199 +7,201 @@ export default function WeatherGenieAI() {
   const [temp, setTemp] = useState('');
   const [mood, setMood] = useState('');
   const [suggestion, setSuggestion] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState('');
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const blinkAnimationRef = useRef(null);
+  const stopBlinkDetection = useRef(false);
 
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        const res = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?lat=${coords.latitude}&lon=${coords.longitude}&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}&units=metric`
-        );
-        const data = await res.json();
-        setWeather(data.weather[0].description);
-        setCity(data.name);
-        setTemp(data.main.temp);
-      },
-      () => setError('📍 Location permission denied.')
-    );
+  const computeEAR = (eye) => {
+    const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    return (dist(eye[1], eye[5]) + dist(eye[2], eye[4])) / (2 * dist(eye[0], eye[3]));
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.srcObject = null;
+    }
+    stopBlinkDetection.current = true;
+    cancelAnimationFrame(blinkAnimationRef.current);
+  };
+
+  const detectBlink = useCallback(async () => {
+    if (stopBlinkDetection.current) return;
+
+    const detection = await faceapi
+      .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks();
+
+    if (detection) {
+      const leftEye = detection.landmarks.getLeftEye();
+      const rightEye = detection.landmarks.getRightEye();
+      const ear = (computeEAR(leftEye) + computeEAR(rightEye)) / 2.0;
+
+      if (ear < 0.25 && !videoRef.current.eyeClosed) {
+        videoRef.current.eyeClosed = true;
+      } else if (ear > 0.25 && videoRef.current.eyeClosed) {
+        videoRef.current.blinkCount = (videoRef.current.blinkCount || 0) + 1;
+        videoRef.current.eyeClosed = false;
+      }
+
+      if (videoRef.current.blinkCount >= 2) {
+        stopBlinkDetection.current = true;
+        await fetchWeatherAndMood();
+        return;
+      }
+    }
+
+    blinkAnimationRef.current = requestAnimationFrame(detectBlink);
   }, []);
 
-  const openCameraAndDetectMood = async () => {
-    setError('');
-    setLoading(true);
-    setSuggestion('');
-    setMood('');
+  const fetchWeatherAndMood = async () => {
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const res = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?lat=${coords.latitude}&lon=${coords.longitude}&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}&units=metric`
+          );
+          const data = await res.json();
+          setWeather(data.weather[0].description);
+          setCity(data.name);
+          setTemp(data.main.temp);
 
-    try {
-      await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+          const canvas = canvasRef.current;
+          canvas.width = videoRef.current.videoWidth;
+          canvas.height = videoRef.current.videoHeight;
+          canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-      videoRef.current.srcObject = stream;
+          stopCamera();
 
-      videoRef.current.onloadedmetadata = async () => {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+          const imageBase64 = canvas.toDataURL('image/jpeg');
+          const detectedMood = await detectMoodFromImage(imageBase64);
+          setMood(detectedMood);
 
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        const result = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions());
-
-        stream.getTracks().forEach(track => track.stop());
-
-        if (!result) {
-          setError('🙈 No human face detected. Try again.');
+          const movieList = await getMoviesSuggestion(detectedMood, data.weather[0].description);
+          setSuggestion(movieList);
           setLoading(false);
-          return;
+        } catch (err) {
+          stopCamera();
+          setError('❌ Error fetching weather or mood');
+          setLoading(false);
         }
-
-        const imageBase64 = canvas.toDataURL('image/jpeg');
-        const detectedMood = await detectMoodFromImage(imageBase64);
-        setMood(detectedMood);
-
-        const movieList = await getMoviesSuggestion(detectedMood);
-        setSuggestion(movieList);
+      },
+      () => {
+        stopCamera();
+        setError('📍 Location permission denied.');
         setLoading(false);
-      };
-    } catch (e) {
-      console.error(e);
-      setError('🚫 Camera access denied or model not loaded.');
-      setLoading(false);
-    }
+      }
+    );
   };
 
-  const detectMoodFromImage = async () => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+  const detectMoodFromImage = async () => 'happy'; // Placeholder mood detection
 
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
-    const imageBuffer = await blob.arrayBuffer();
+  const getMoviesSuggestion = async (mood, weather) =>
+    `1. Movie A (2021) - Drama - Perfect for ${mood} during ${weather}.
+2. Movie B (2019) - Romance - Ideal for ${mood}.
+3. Movie C (2020) - Comedy - Great for ${weather} weather.`;
 
-    const res = await fetch("https://api-inference.huggingface.co/models/distilgpt2", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${import.meta.env.VITE_HF_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ inputs: prompt }),
-    });
-    
-    if (!res.ok) {
-      console.error("API error:", await res.text());
-      return 'happy';
-    }
-
-    const predictions = await res.json();
-    console.log("Suggestions:", predictions);
-    const topEmotion = predictions[0]?.label.toLowerCase();
-
-    if (topEmotion.includes('happy')) return 'happy';
-    if (topEmotion.includes('sad')) return 'sad';
-    if (topEmotion.includes('romantic') || topEmotion.includes('neutral')) return 'romantic';
-
-    return 'happy';
-  };
-
-  const getMoviesSuggestion = async (mood) => {
-    const prompt = `Suggest 3 highly-rated movies for someone feeling "${mood}" during "${weather}" weather. Format: Title (Year) - Genre - Short summary.`;
-    const res = await fetch('https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${import.meta.env.VITE_HF_API_KEY}`,
-      },
-      body: JSON.stringify({ inputs: prompt }),
-    });
-    const data = await res.json();
-    return data[0]?.generated_text.replace(prompt, '').trim();
-  };
-
-  const handleRazorpayPayment = () => {
+  const openRazorpay = () => {
     const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: 49900, // ₹499 in paise
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID, // 👈 .env file mein define kar
+      amount: 49900, // ₹499.00 in paisa
       currency: 'INR',
-      name: 'Weather Genie',
-      description: 'AI Mood-based Movie Suggestions',
+      name: 'Weather Genie AI',
+      description: 'Support this magical project!',
+      image: 'https://your-logo-url.com/logo.png',
       handler: function (response) {
-        alert('Payment successful: ' + response.razorpay_payment_id);
+        setPaymentStatus(`✅ Payment successful! Payment ID: ${response.razorpay_payment_id}`);
       },
       prefill: {
         name: 'Weather Genie User',
         email: 'user@example.com',
         contact: '9999999999'
       },
+      notes: {
+        address: 'Weather Genie App Support'
+      },
       theme: {
-        color: '#6366f1'
+        color: '#3399cc'
       }
     };
+
     const rzp = new window.Razorpay(options);
     rzp.open();
+
+    rzp.on('payment.failed', function (response) {
+      setPaymentStatus(`❌ Payment failed: ${response.error.description}`);
+    });
   };
 
   useEffect(() => {
-    if (!document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, []);
-  
+    const initApp = async () => {
+      setLoading(true);
+      stopBlinkDetection.current = false;
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+        ]);
+
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        streamRef.current = stream;
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+
+        detectBlink();
+
+        setTimeout(() => {
+          if (!stopBlinkDetection.current) {
+            stopCamera();
+            setLoading(false);
+            setError('⌛ Timeout: Please blink twice within 5 seconds.');
+          }
+        }, 5000);
+      } catch (err) {
+        stopCamera();
+        setError('🚫 Camera or model loading issue!');
+        setLoading(false);
+      }
+    };
+
+    initApp();
+    return () => stopCamera();
+  }, [detectBlink]);
+
   return (
-    <div className="bg-gradient-to-b from-gray-950 to-black text-white p-5 min-h-screen text-center">
-      <h1 className="text-4xl font-bold mb-4">🌦️ Weather Genie AI 🧞</h1>
-      <p className="mb-2 text-lg">
-        Weather: {weather ? `${weather} in ${city}, ${temp}°C` : 'Detecting...'}
-      </p>
-
-      {error && <p className="text-red-500 font-semibold">{error}</p>}
-
-      {!loading && (
-        <button
-          onClick={openCameraAndDetectMood}
-          className="bg-indigo-800 text-5xl rounded-full w-32 h-32 mx-auto my-4 shadow-lg transition-transform transform hover:scale-110"
-        >
-          👍
-        </button>
-      )}
-
-      {loading && <p className="mt-4">📸 Detecting mood...</p>}
-
-      <video ref={videoRef} autoPlay style={{ display: 'none' }}></video>
-      <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
-
-      {mood && suggestion && (
-        <div className="mt-6 relative bg-indigo-900 p-5 rounded-xl shadow-2xl inline-block overflow-hidden transform transition-all duration-500 hover:scale-105 hover:shadow-indigo-500/50">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 animate-gradient-border opacity-75" />
-          <div className="relative z-10">
-            <h2 className="text-2xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-orange-500 animate-pulse">
-              Mood: {mood.toUpperCase()}
-            </h2>
-            <div className="suggestion-container text-left text-gray-200 max-w-md">
-              {suggestion.split('\n').map((item, index) => (
-                <div
-                  key={index}
-                  className="suggestion-item p-3 mb-2 bg-indigo-800 bg-opacity-60 rounded-md transition-all duration-300 hover:bg-opacity-90 hover:translate-x-2"
-                >
-                  <span className="block text-sm leading-relaxed break-words">{item}</span>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={handleRazorpayPayment}
-              className="mt-4 bg-green-600 px-6 py-2 rounded-full font-bold hover:bg-green-700 transition"
-            >
-              💳 Support Genie
-            </button>
-          </div>
+    <div className="app">
+      <h1>🌦️ Weather Genie AI 🧞</h1>
+      {loading && <p>📸 Detecting blink and mood...</p>}
+      {error && <p>{error}</p>}
+      {!loading && !error && mood && suggestion && (
+        <div>
+          <p>📍 Weather: {weather} in {city}, {temp}°C</p>
+          <p>😊 Mood: {mood}</p>
+          <pre style={{ whiteSpace: 'pre-wrap' }}>{suggestion}</pre>
         </div>
       )}
+
+      {/* 👇 Hidden Video - required for face-api.js */}
+      <video ref={videoRef} style={{ display: 'none' }} autoPlay muted />
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      <hr style={{ margin: '20px 0' }} />
+
+      <button onClick={openRazorpay} style={{ padding: '10px 20px', fontSize: '16px' }}>
+        💸 Support Weather Genie
+      </button>
+
+      {paymentStatus && <p style={{ marginTop: '10px' }}>{paymentStatus}</p>}
     </div>
   );
 }
