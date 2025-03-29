@@ -16,6 +16,8 @@ export default function WeatherGenieAI() {
   const streamRef = useRef(null);
   const blinkAnimationRef = useRef(null);
   const stopBlinkDetection = useRef(false);
+  const blinkTimeoutRef = useRef(null);
+  const speechRef = useRef(null); // 🆕 Reference to control voice
 
   const computeEAR = (eye) => {
     const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
@@ -33,6 +35,13 @@ export default function WeatherGenieAI() {
     }
     stopBlinkDetection.current = true;
     cancelAnimationFrame(blinkAnimationRef.current);
+  };
+
+  const stopSpeech = () => {
+    if (window.speechSynthesis && speechRef.current) {
+      window.speechSynthesis.cancel();
+      speechRef.current = null;
+    }
   };
 
   const detectBlink = useCallback(async () => {
@@ -56,6 +65,13 @@ export default function WeatherGenieAI() {
 
       if (videoRef.current.blinkCount >= 2) {
         stopBlinkDetection.current = true;
+
+        if (blinkTimeoutRef.current) {
+          clearTimeout(blinkTimeoutRef.current);
+          blinkTimeoutRef.current = null;
+        }
+
+        stopSpeech(); // 🛑 Stop voice before fetching
         await fetchWeatherAndMood();
         return;
       }
@@ -104,7 +120,7 @@ export default function WeatherGenieAI() {
     );
   };
 
-  const detectMoodFromImage = async () => 'happy'; // Placeholder mood detection
+  const detectMoodFromImage = async () => 'happy';
 
   const getMoviesSuggestion = async (mood, weather) =>
     `1. Movie A (2021) - Drama - Perfect for ${mood} during ${weather}.
@@ -113,8 +129,8 @@ export default function WeatherGenieAI() {
 
   const openRazorpay = () => {
     const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID, // 👈 .env file mein define kar
-      amount: 49900, // ₹499.00 in paisa
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: 49900,
       currency: 'INR',
       name: 'Weather Genie AI',
       description: 'Support this magical project!',
@@ -147,6 +163,54 @@ export default function WeatherGenieAI() {
     const initApp = async () => {
       setLoading(true);
       stopBlinkDetection.current = false;
+
+      const synth = window.speechSynthesis;
+
+      const speakGenieInstruction = (lang = 'hi-IN') => {
+        const messages = {
+          'hi-IN': [
+            "Namaste! Kripya apni aankhen do baar jhapkaayein. Weather Genie aapka intezaar kar raha hai!",
+            "Shubh din! Do baar aankhen jhapkaayein aur Weather Genie ke jaadu ka anubhav karein!",
+            "Namaste dost! Aankhen do baar jhapkaayein, Weather Genie aapke liye taiyaar hai!"
+          ],
+          'en-US': [
+            "Hello! Please blink twice. Weather Genie is waiting for you!",
+            "Greetings! Blink twice to experience the magic of Weather Genie!",
+            "Hi there! Blink twice, and let Weather Genie work its magic!"
+          ]
+        };
+
+        const messageList = messages[lang] || messages['hi-IN'];
+        const message = messageList[Math.floor(Math.random() * messageList.length)];
+
+        const utter = new SpeechSynthesisUtterance(message);
+        speechRef.current = utter;
+        utter.lang = lang;
+        utter.pitch = 1.3;
+        utter.rate = 0.9;
+        utter.volume = 1;
+
+        const playChime = () => {
+          const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-1.mp3');
+          audio.play().catch(err => console.log('Sound play error:', err));
+        };
+        playChime();
+
+        synth.speak(utter);
+
+        utter.onend = () => {
+          const playEndSound = () => {
+            const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-2.mp3');
+            audio.play().catch(err => console.log('Sound play error:', err));
+          };
+          playEndSound();
+        };
+      };
+
+      if (!mood && !suggestion) {
+        speakGenieInstruction('hi-IN');
+      }
+
       try {
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
@@ -160,13 +224,13 @@ export default function WeatherGenieAI() {
 
         detectBlink();
 
-        setTimeout(() => {
+        blinkTimeoutRef.current = setTimeout(() => {
           if (!stopBlinkDetection.current) {
             stopCamera();
             setLoading(false);
-            setError('⌛ Timeout: Please blink twice within 5 seconds.');
+            setError('⌛ Timeout: Please blink twice within 10 seconds.');
           }
-        }, 5000);
+        }, 10000);
       } catch (err) {
         stopCamera();
         setError('🚫 Camera or model loading issue!');
@@ -175,13 +239,28 @@ export default function WeatherGenieAI() {
     };
 
     initApp();
-    return () => stopCamera();
+    return () => {
+      stopCamera();
+      stopSpeech();
+      if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current);
+    };
   }, [detectBlink]);
 
   return (
     <div className="app">
       <h1>🌦️ Weather Genie AI 🧞</h1>
-      {loading && <p>📸 Detecting blink and mood...</p>}
+      {loading && !error && (
+        <div style={{
+          textAlign: 'center',
+          marginTop: '40px',
+          animation: 'pulse 2s infinite',
+          fontSize: '1.3rem',
+          fontWeight: 'bold',
+          color: '#0077ff'
+        }}>
+          👀 Please blink your eyes <span style={{ color: '#ff0080' }}>twice</span> to continue...
+        </div>
+      )}
       {error && <p>{error}</p>}
       {!loading && !error && mood && suggestion && (
         <div>
@@ -190,18 +269,20 @@ export default function WeatherGenieAI() {
           <pre style={{ whiteSpace: 'pre-wrap' }}>{suggestion}</pre>
         </div>
       )}
-
-      {/* 👇 Hidden Video - required for face-api.js */}
       <video ref={videoRef} style={{ display: 'none' }} autoPlay muted />
       <canvas ref={canvasRef} style={{ display: 'none' }} />
-
       <hr style={{ margin: '20px 0' }} />
-
       <button onClick={openRazorpay} style={{ padding: '10px 20px', fontSize: '16px' }}>
         💸 Support Weather Genie
       </button>
-
       {paymentStatus && <p style={{ marginTop: '10px' }}>{paymentStatus}</p>}
+      <style>{`
+        @keyframes pulse {
+          0% { opacity: 0.7; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.05); }
+          100% { opacity: 0.7; transform: scale(1); }
+        }
+      `}</style>
     </div>
   );
 }
