@@ -80,11 +80,11 @@ export default function WeatherGenieAI() {
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
     const imageBuffer = await blob.arrayBuffer();
 
-    const res = await fetch("https://api-inference.huggingface.co/models/google/flan-t5-base", {
+    const res = await fetch("https://api-inference.huggingface.co/models/distilgpt2", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${import.meta.env.VITE_HF_API_KEY}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ inputs: prompt }),
     });
@@ -95,6 +95,7 @@ export default function WeatherGenieAI() {
     }
 
     const predictions = await res.json();
+    console.log("Suggestions:", predictions);
     const topEmotion = predictions[0]?.label.toLowerCase();
 
     if (topEmotion.includes('happy')) return 'happy';

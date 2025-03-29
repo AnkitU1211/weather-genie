@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import Maintenance from './components/Maintenance';
 import WeatherGenieAI from './components/WeatherGenieAI';
+import VoiceUnlockGenie from './components/VoiceUnlockGenie';
 
 const App = () => {
   const isUnderMaintenance = false;
-
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isGenieActive, setIsGenieActive] = useState(false);
+  
   useEffect(() => {
     const setVH = () => {
       let vh = window.innerHeight * 0.01;
@@ -49,7 +52,10 @@ const App = () => {
     return <Maintenance />;
   }
 
-  const [isGenieActive, setIsGenieActive] = useState(false);
+  if (!isUnlocked) {
+    return <VoiceUnlockGenie onUnlock={() => setIsUnlocked(true)} />;
+  }
+
 
   const handleSummonGenie = () => {
     setIsGenieActive(!isGenieActive);
