@@ -80,15 +80,15 @@ export default function WeatherGenieAI() {
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
     const imageBuffer = await blob.arrayBuffer();
 
-    const res = await fetch('https://api-inference.huggingface.co/models/trpakov/vit-face-expression', {
-      method: 'POST',
+    const res = await fetch("https://api-inference.huggingface.co/models/google/flan-t5-base", {
+      method: "POST",
       headers: {
         Authorization: `Bearer ${import.meta.env.VITE_HF_API_KEY}`,
-        'Content-Type': 'application/octet-stream',
+        'Content-Type': 'application/json',
       },
-      body: imageBuffer,
+      body: JSON.stringify({ inputs: prompt }),
     });
-
+    
     if (!res.ok) {
       console.error("API error:", await res.text());
       return 'happy';
