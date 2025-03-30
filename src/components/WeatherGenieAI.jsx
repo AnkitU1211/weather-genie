@@ -22,8 +22,9 @@ export default function WeatherGenieAI() {
   const isMobile = /Mobi|Android/i.test(navigator.userAgent);
   const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
   let lastDetectionTime = Date.now();
+  let lastBlinkTime = 0;
 
-  const computeEAR = (eye) => {
+  const computeEyeRatio = (eye) => {
     const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
     return (dist(eye[1], eye[5]) + dist(eye[2], eye[4])) / (2 * dist(eye[0], eye[3]));
   };
@@ -65,12 +66,16 @@ export default function WeatherGenieAI() {
     if (detection) {
       const leftEye = detection.landmarks.getLeftEye();
       const rightEye = detection.landmarks.getRightEye();
-      const ear = (computeEAR(leftEye) + computeEAR(rightEye)) / 2.0;
+      const eyeRatio = (computeEyeRatio(leftEye) + computeEyeRatio(rightEye)) / 2.0;
 
-      if (ear < 0.25 && !videoRef.current.eyeClosed) {
+      if (eyeRatio < 0.28 && !videoRef.current.eyeClosed) {
         videoRef.current.eyeClosed = true;
-      } else if (ear > 0.25 && videoRef.current.eyeClosed) {
-        videoRef.current.blinkCount = (videoRef.current.blinkCount || 0) + 1;
+      } else if (eyeRatio > 0.28 && videoRef.current.eyeClosed) {
+        const now = Date.now();
+        if (now - lastBlinkTime > 400) {
+          videoRef.current.blinkCount = (videoRef.current.blinkCount || 0) + 1;
+          lastBlinkTime = now;
+        }
         videoRef.current.eyeClosed = false;
       }
 
