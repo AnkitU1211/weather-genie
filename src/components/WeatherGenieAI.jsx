@@ -20,6 +20,8 @@ export default function WeatherGenieAI() {
   const speechRef = useRef(null);
 
   const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+  const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+  let lastDetectionTime = Date.now();
 
   const computeEAR = (eye) => {
     const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
@@ -49,8 +51,15 @@ export default function WeatherGenieAI() {
   const detectBlink = useCallback(async () => {
     if (stopBlinkDetection.current) return;
 
+    const now = Date.now();
+    if (now - lastDetectionTime < 150) {
+      blinkAnimationRef.current = requestAnimationFrame(detectBlink);
+      return;
+    }
+    lastDetectionTime = now;
+
     const detection = await faceapi
-      .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+      .detectSingleFace(videoRef.current, options)
       .withFaceLandmarks();
 
     if (detection) {
@@ -225,7 +234,11 @@ export default function WeatherGenieAI() {
         ]);
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user' }
+          video: {
+            facingMode: 'user',
+            width: { ideal: 320 },
+            height: { ideal: 240 }
+          }
         });
 
         streamRef.current = stream;
