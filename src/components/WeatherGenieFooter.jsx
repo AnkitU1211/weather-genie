@@ -2,14 +2,13 @@ import React from 'react';
 
 const WeatherGenieFooter = () => {
   const openLegalSupportPage = () => {
-    const newWindow = window.open('', '_blank');
-    newWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="en">
+    const newTab = window.open('', '_blank');
+
+    const htmlContent = `
+      <html>
         <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>Legal & Support - Weather Genie</title>
+          <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap" rel="stylesheet">
           <style>
             body {
               font-family: 'Segoe UI', sans-serif;
@@ -72,22 +71,23 @@ const WeatherGenieFooter = () => {
               <h3>📞 Contact Us</h3>
               <p>
                 Need help or feedback?<br />
-                📧 <a href="mailto:support@weathergenie.in">support@weathergenie.in</a><br />
-                📱 +91-98765-43210<br />
-                🏢 Weather Genie AI Labs, Innovation Tower, Sector 62, Noida, India – 201309
+                📧 Email support temporarily unavailable<br />
+                📱 +91-98188-36297<br />
+                🏢 Weather Genie AI Labs (in progress – physical office not yet established)
               </p>
             </section>
           </div>
         </body>
       </html>
-    `);
-    newWindow.document.close();
+    `;
+
+    newTab.document.write(htmlContent);
+    newTab.document.close();
   };
 
   return (
     <div style={{ textAlign: 'center', marginTop: '40px' }}>
       <button
-        type="button"
         onClick={openLegalSupportPage}
         style={{
           padding: '14px 30px',
@@ -100,14 +100,6 @@ const WeatherGenieFooter = () => {
           boxShadow: '0 4px 15px rgba(0, 119, 255, 0.4)',
           cursor: 'pointer',
           transition: 'transform 0.2s ease, box-shadow 0.3s ease',
-        }}
-        onMouseOver={e => {
-          e.currentTarget.style.transform = 'scale(1.03)';
-          e.currentTarget.style.boxShadow = '0 6px 18px rgba(0, 119, 255, 0.5)';
-        }}
-        onMouseOut={e => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 119, 255, 0.4)';
         }}
       >
         📘 View Legal & Support Information
