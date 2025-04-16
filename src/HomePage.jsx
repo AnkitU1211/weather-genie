@@ -2,11 +2,60 @@ import React, { useState, useEffect } from "react";
 import Maintenance from './components/Maintenance';
 import WeatherGenieAI from './components/WeatherGenieAI';
 
+// Documentation Component
+const Documentation = ({ onClose, onDocsClose }) => {
+  return (
+    <div style={docStyles.modalOverlay}>
+      <div style={docStyles.modalContent}>
+        <div style={docStyles.sparkleEffect}>
+          <span style={docStyles.sparkle}>✨</span>
+          <span style={docStyles.sparkle}>🌟</span>
+          <span style={docStyles.sparkle}>⚡️</span>
+        </div>
+        <h2 style={docStyles.modalTitle}>Weather Genie Documentation 🧞‍♂️</h2>
+        <div style={docStyles.modalBody}>
+          <h3>Welcome to Weather Genie!</h3>
+          <p>
+            Weather Genie is your AI-powered, mood-based movie recommendation assistant. 
+            It analyzes your mood and local weather to suggest the perfect movie for you. 🌦️🎥
+          </p>
+          <h4>How to Use:</h4>
+          <ul>
+            <li>Click "Summon the Genie" to start the magic.</li>
+            <li>Share your mood or let the Genie sense it.</li>
+            <li>Get personalized movie recommendations based on weather and vibes.</li>
+            <li>Support the Genie with a one-time payment to keep the magic alive!</li>
+          </ul>
+          <h4>Features:</h4>
+          <ul>
+            <li>Real-time weather integration.</li>
+            <li>AI-driven mood analysis.</li>
+            <li>Seamless Razorpay payment support.</li>
+            <li>Magical UI with animations.</li>
+          </ul>
+          <p>Got questions? Tweet us at <a href="https://x.com/weathergenie" style={docStyles.link}>@WeatherGenie</a>.</p>
+        </div>
+        <button
+          style={docStyles.closeButton}
+          onClick={() => {
+            onClose(); // Close the modal
+            onDocsClose(); // Activate the genie
+          }}
+          onMouseEnter={(e) => (e.target.style.boxShadow = "0 0 15px rgba(0, 255, 255, 0.8)")}
+          onMouseLeave={(e) => (e.target.style.boxShadow = "none")}
+        >
+          Close the Grimoire 📖
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const HomePage = () => {
   const isUnderMaintenance = false;
   const [isGenieActive, setIsGenieActive] = useState(false);
-  
+  const [isDocsOpen, setIsDocsOpen] = useState(false);
+
   useEffect(() => {
     const setVH = () => {
       let vh = window.innerHeight * 0.01;
@@ -52,7 +101,16 @@ const HomePage = () => {
   }
 
   const handleSummonGenie = () => {
-    setIsGenieActive(!isGenieActive);
+    setIsDocsOpen(true); // Only open documentation
+  };
+
+  const handleCloseDocs = () => {
+    setIsDocsOpen(false); // Close documentation
+    setIsGenieActive(true); // Activate genie
+  };
+
+  const handleReleaseGenie = () => {
+    setIsGenieActive(false); // Deactivate genie
   };
 
   return (
@@ -78,7 +136,7 @@ const HomePage = () => {
           </p>
           <button
             style={isGenieActive ? styles.magicButtonActive : styles.magicButton}
-            onClick={handleSummonGenie}
+            onClick={isGenieActive ? handleReleaseGenie : handleSummonGenie}
             onMouseEnter={(e) => (e.target.style.boxShadow = "0 0 20px rgba(0, 255, 255, 0.8)")}
             onMouseLeave={(e) => (e.target.style.boxShadow = "none")}
           >
@@ -96,6 +154,8 @@ const HomePage = () => {
           )}
         </section>
       </main>
+
+      {isDocsOpen && <Documentation onClose={() => setIsDocsOpen(false)} onDocsClose={handleCloseDocs} />}
 
       <footer style={styles.footer}>
         <p>
@@ -238,6 +298,77 @@ const styles = {
   },
 };
 
+// Documentation styles
+const docStyles = {
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(0, 0, 0, 0.7)",
+    backdropFilter: "blur(5px)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+    animation: "fadeIn 0.5s ease-in-out",
+  },
+  modalContent: {
+    background: "rgba(255, 255, 255, 0.1)",
+    padding: "2rem",
+    borderRadius: "1.5rem",
+    boxShadow: "0 8px 40px rgba(0, 255, 255, 0.5)",
+    border: "1px solid rgba(0, 255, 255, 0.4)",
+    maxWidth: "600px",
+    width: "90%",
+    textAlign: "left",
+    color: "#fff",
+    position: "relative",
+    animation: "popIn 0.5s ease-in-out",
+  },
+  modalTitle: {
+    fontSize: "2rem",
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: "1.5rem",
+    textShadow: "0 0 10px rgba(0, 255, 255, 0.7)",
+  },
+  modalBody: {
+    fontSize: "1rem",
+    lineHeight: "1.6",
+    marginBottom: "2rem",
+  },
+  link: {
+    color: "#00c9ff",
+    textDecoration: "underline",
+  },
+  closeButton: {
+    padding: "0.8rem 2rem",
+    fontSize: "1rem",
+    borderRadius: "50px",
+    border: "none",
+    background: "linear-gradient(45deg, #ff6b6b 0%, #ffa07a 100%)",
+    color: "#fff",
+    cursor: "pointer",
+    fontWeight: "bold",
+    transition: "all 0.4s ease",
+    display: "block",
+    margin: "0 auto",
+  },
+  sparkleEffect: {
+    position: "absolute",
+    top: "-20px",
+    left: "50%",
+    transform: "translateX(-50%)",
+  },
+  sparkle: {
+    fontSize: "1.5rem",
+    margin: "0 10px",
+    animation: "sparkle 1s infinite",
+  },
+};
+
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
   @keyframes spin {
@@ -257,6 +388,14 @@ styleSheet.textContent = `
     0% { transform: scale(1); }
     50% { transform: scale(1.1); }
     100% { transform: scale(1); }
+  }
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes popIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
   }
   @media (max-width: 600px) {
     h1 {
