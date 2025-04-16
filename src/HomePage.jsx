@@ -35,8 +35,8 @@ const Documentation = ({ onClose, onDocsClose }) => {
           </ul>
           <p>
             Got questions? Tweet us at{" "}
-            <a href="https://x.com/weathergenie" style={docStyles.link}>
-              @WeatherGenie
+            <a href="https://x.com/ankitjust4u121" style={docStyles.link}>
+              @ankitjust4u121
             </a>
             .
           </p>
