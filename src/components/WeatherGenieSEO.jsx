@@ -5,10 +5,7 @@ const WeatherGenieSEO = () => {
   return (
     <Helmet>
       <title>Weather Genie AI - Accurate Weather Forecasts and Mood-based Movie Suggestions</title>
-      <meta
-        name="description"
-        content="Weather Genie AI delivers personalized, real-time weather forecasts along with AI-powered mood detection and tailored movie recommendations."
-      />
+      <meta name="google-site-verification" content="ZgQbZzbtCHx073BWhiE0D2DorXLE93Eeby6oqbeary8" />
       <meta
         name="keywords"
         content="Weather Genie AI, AI Weather App, mood-based movie suggestions, real-time weather, innovative weather forecast, personalized movie recommendations"
