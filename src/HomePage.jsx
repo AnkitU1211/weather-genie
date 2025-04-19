@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Maintenance from "./components/Maintenance";
 import WeatherGenieAI from "./components/WeatherGenieAI";
+import WeatherGenieSEO from "./components/WeatherGenieSEO";
 
 // Documentation Component (unchanged)
 const Documentation = ({ onClose, onDocsClose }) => {
@@ -165,6 +166,7 @@ const HomePage = () => {
 
   return (
     <div style={styles.wrapper}>
+      <WeatherGenieSEO />
       <header style={styles.header}>
         <h1 style={styles.logo}>
           <span style={styles.logoAnimation}>🌦️</span> Weather Genie
